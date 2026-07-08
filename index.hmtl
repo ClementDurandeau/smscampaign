@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMS Campaign Link Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 16px;
+    color: #1a1a2e;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 520px;
+    padding: 32px;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
+  label { display: block; font-weight: 600; margin: 16px 0 6px; font-size: 0.9rem; }
+  input, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #d0d0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border 0.2s;
+  }
+  input:focus, textarea:focus { outline: none; border-color: #764ba2; }
+  textarea { resize: vertical; min-height: 90px; }
+  .char-count { text-align: right; font-size: 0.75rem; color: #999; margin-top: 4px; }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: transform 0.1s, background 0.2s;
+  }
+  button:active { transform: scale(0.98); }
+  .btn-primary {
+    width: 100%;
+    background: #764ba2;
+    color: #fff;
+    padding: 14px;
+    margin-top: 20px;
+  }
+  .btn-primary:hover { background: #653f8c; }
+  .output {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid #eee;
+    display: none;
+  }
+  .output.visible { display: block; }
+  .url-box {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .url-box input {
+    background: #f6f6fb;
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+  .btn-copy {
+    background: #34c759;
+    color: #fff;
+    padding: 0 18px;
+    white-space: nowrap;
+  }
+  .btn-copy:hover { background: #2ba84a; }
+  .qr-wrap {
+    text-align: center;
+    margin-top: 24px;
+  }
+  #qrcode {
+    display: inline-block;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+  }
+  #qrcode img, #qrcode canvas { display: block; }
+  .btn-download {
+    background: #007aff;
+    color: #fff;
+    padding: 12px 24px;
+    margin-top: 16px;
+  }
+  .btn-download:hover { background: #0066d6; }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a2e;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .error { color: #e74c3c; font-size: 0.8rem; margin-top: 6px; display: none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>📱 SMS Campaign Generator</h1>
+    <p class="subtitle">Create a click-to-text link with a downloadable QR code.</p>
+
+    <label for="phone">Phone Number</label>
+    <input type="tel" id="phone" placeholder="+15551234567" />
+    <div class="error" id="phoneError">Please enter a phone number.</div>
+
+    <label for="text">Message Text</label>
+    <textarea id="text" placeholder="Hi! I'd like to learn more about your offer."></textarea>
+    <div class="char-count"><span id="count">0</span> characters</div>
+
+    <button class="btn-primary" onclick="generate()">Generate Campaign Link</button>
+
+    <div class="output" id="output">
+      <label>Your Campaign URL</label>
+      <div class="url-box">
+        <input type="text" id="resultUrl" readonly />
+        <button class="btn-copy" onclick="copyUrl()">Copy</button>
+      </div>
+
+      <div class="qr-wrap">
+        <div id="qrcode"></div>
+        <br>
+        <button class="btn-download" onclick="downloadQR()">Download QR as JPG</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  const textArea = document.getElementById('text');
+  const countEl = document.getElementById('count');
+  textArea.addEventListener('input', () => {
+    countEl.textContent = textArea.value.length;
+  });
+
+  let qrInstance = null;
+
+  function buildSmsLink(phone, message) {
+    // "?&" combined separator works across Android (?) and iOS (&)
+    const body = encodeURIComponent(message);
+    return `sms:${phone}?&body=${body}`;
+  }
+
+  function generate() {
+    const phone = document.getElementById('phone').value.trim();
+    const message = document.getElementById('text').value.trim();
+    const phoneError = document.getElementById('phoneError');
+
+    if (!phone) {
+      phoneError.style.display = 'block';
+      return;
+    }
+    phoneError.style.display = 'none';
+
+    const url = buildSmsLink(phone, message);
+    document.getElementById('resultUrl').value = url;
+
+    // Reset & render QR code
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = '';
+    qrInstance = new QRCode(qrContainer, {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    document.getElementById('output').classList.add('visible');
+  }
+
+  function copyUrl() {
+    const urlInput = document.getElementById('resultUrl');
+    urlInput.select();
+    urlInput.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(urlInput.value)
+      .then(() => showToast('✅ URL copied to clipboard!'))
+      .catch(() => {
+        document.execCommand('copy');
+        showToast('✅ URL copied!');
+      });
+  }
+
+  function downloadQR() {
+    // qrcodejs may render as <canvas> or <img>; handle both
+    const container = document.getElementById('qrcode');
+    const canvas = container.querySelector('canvas');
+    const img = container.querySelector('img');
+
+    // Create a clean canvas with white background (JPG has no transparency)
+    const size = 240;
+    const out = document.createElement('canvas');
+    out.width = size;
+    out.height = size;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+
+    const source = canvas || img;
+    if (!source) { showToast('⚠️ Generate a QR code first.'); return; }
+
+    const finalize = () => {
+      const jpg = out.toDataURL('image/jpeg', 0.95);
+      const a = document.createElement('a');
+      a.href = jpg;
+      a.download = 'sms-campaign-qr.jpg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('⬇️ QR code downloaded as JPG!');
+    };
+
+    if (canvas) {
+      ctx.drawImage(canvas, 10, 10, 220, 220);
+      finalize();
+    } else {
+      const tmp = new Image();
+      tmp.crossOrigin = 'anonymous';
+      tmp.onload = () => { ctx.drawImage(tmp, 10, 10, 220, 220); finalize(); };
+      tmp.src = img.src;
+    }
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
