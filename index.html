@@ -38,14 +38,24 @@
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   html, body { height: 100%; }
 
-  /* Fond : un calque fixe séparé du scroll, pour éviter le repaint/jank
-     que provoque "background-attachment: fixed" sur mobile (surtout
-     combiné à des flous animés). Le contenu, lui, peut défiler librement. */
+  /* Le dégradé vit sur html/body (pas en position:fixed) : il couvre donc
+     toujours toute la page, y compris les bandes qui apparaissent quand la
+     barre d'adresse de Safari se déploie/rétracte sur iOS — un calque
+     purement "fixed" laisserait ces bandes blanches par-dessous. */
+  html {
+    background: linear-gradient(135deg, #a8c0ff 0%, #c2a8ff 35%, #ffb8d9 70%, #ffd8a8 100%);
+  }
+  body {
+    background: transparent;
+    background-color: #c2a8ff; /* secours anti-flash si le dégradé html tarde à peindre */
+  }
+
+  /* Calque dédié aux bulles floutées animées : purement décoratif,
+     posé au-dessus du dégradé de base. */
   .bg {
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(135deg, #a8c0ff 0%, #c2a8ff 35%, #ffb8d9 70%, #ffd8a8 100%);
     overflow: hidden;
   }
   .bg::before, .bg::after {
