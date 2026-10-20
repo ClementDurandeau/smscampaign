@@ -252,13 +252,19 @@
     return Math.max(140, Math.min(220, cardInner));
   }
 
+  // Encode le corps du SMS en laissant en clair , / : (autorisés dans un lien),
+  // pour que les scanners QR Android qui décodent mal ne les altèrent pas.
+  function encodeSmsBody(text) {
+    return encodeURIComponent(text).replace(/%2C|%2F|%3A/gi, decodeURIComponent);
+  }
+
   function generate() {
     const phone = document.getElementById('phone').value.trim();
     const text = document.getElementById('text').value.trim();
     if (!phone) { showToast(translations[currentLang].alertPhone); return; }
     const cleanPhone = phone.replace(/[\s()-]/g, '');
     currentUrl = 'sms:' + cleanPhone;
-    if (text) { currentUrl += '?' + 'body=' + encodeURIComponent(text); }
+    if (text) { currentUrl += '?' + 'body=' + encodeSmsBody(text); }
     document.getElementById('urlBox').textContent = currentUrl;
     const qrContainer = document.getElementById('qrcode');
     qrContainer.innerHTML = '';
