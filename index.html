@@ -168,6 +168,11 @@
   .segment input:checked + span { background: var(--segment-active); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
   .segment input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
   .hint { margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--text-secondary); }
+  /* Aide au choix du format : les deux options restent visibles, l'option active est mise en avant */
+  .format-help { list-style: none; margin-top: 10px; display: grid; gap: 6px; font-size: 13px; line-height: 1.4; color: var(--text-secondary); }
+  .format-help li { padding-left: 10px; border-left: 2px solid transparent; transition: color 0.2s, border-color 0.2s; }
+  .format-help li.is-active { color: var(--text-primary); border-left-color: var(--accent); }
+  .format-help strong { font-weight: 600; }
   .hint.warn { color: var(--warn); font-weight: 500; }
   .hint[hidden], .qr-wrap[hidden] { display: none; }
 
@@ -231,7 +236,10 @@
           <label class="segment"><input type="radio" name="qrFormat" value="sms" checked><span id="qrFormatSms"></span></label>
           <label class="segment"><input type="radio" name="qrFormat" value="smsto"><span id="qrFormatSmsto"></span></label>
         </div>
-        <p class="hint" id="qrFormatHint"></p>
+        <ul class="format-help" id="qrFormatHelp">
+          <li data-format="sms"><strong id="qrHelpSmsTitle"></strong> <span id="qrHelpSms"></span></li>
+          <li data-format="smsto"><strong id="qrHelpSmstoTitle"></strong> <span id="qrHelpSmsto"></span></li>
+        </ul>
         <p class="hint warn" id="qrError" role="alert" hidden></p>
       </div>
       <div class="qr-wrap">
@@ -246,19 +254,19 @@
   const translations = {
     fr: { title: "Générateur de liens SMS", subtitle: "Créez une campagne SMS en quelques secondes", phoneLabel: "Numéro de téléphone", textLabel: "Message", generateBtn: "Générer", urlLabel: "Lien de campagne", copyBtn: "Copier", downloadBtn: "Télécharger le QR (JPG)", phonePlaceholder: "+33 6 12 34 56 78", textPlaceholder: "Votre message...", alertPhone: "Veuillez saisir un numéro de téléphone.", copied: "Lien copié dans le presse-papiers !", docTitle: "Générateur de liens SMS", updated: "Mis à jour le",
       qrFormatLabel: "Format du QR code", qrFormatSms: "Lien sms:", qrFormatSmsto: "Texte SMSTO",
-      qrHintSms: "Le QR contient le lien ci-dessus, avec le message encodé.",
-      qrHintSmsto: "Le QR contient le numéro et le message en texte brut, sans encodage. Évite les erreurs de décodage de certains scanners Android. Accents non pris en charge.",
+      qrHelpSms: "— format standard, recommandé par défaut. Le QR contient le lien ci-dessus, message encodé.",
+      qrHelpSmsto: "— message en texte brut, sans encodage. À utiliser si certains Android affichent mal le message (« + » disparus, « %20 » visibles). Sans accents, QR uniquement.",
       qrErrorSmstoAccents: "Le format SMSTO n'accepte pas les accents ni les caractères spéciaux (é, è, €…). Retirez-les du message ou choisissez le format « Lien sms: ».",
       qrErrorGeneric: "Le QR code n'a pas pu être généré. Le message est peut-être trop long." },
     en: { title: "SMS Link Generator", subtitle: "Create an SMS campaign in seconds", phoneLabel: "Phone number", textLabel: "Message", generateBtn: "Generate", urlLabel: "Campaign link", copyBtn: "Copy", downloadBtn: "Download QR (JPG)", phonePlaceholder: "+1 514 555 0123", textPlaceholder: "Your message...", alertPhone: "Please enter a phone number.", copied: "Link copied to clipboard!", docTitle: "SMS Link Generator", updated: "Updated",
       qrFormatLabel: "QR code format", qrFormatSms: "sms: link", qrFormatSmsto: "SMSTO text",
-      qrHintSms: "The QR code contains the link above, with the message encoded.",
-      qrHintSmsto: "The QR code contains the number and message as plain text, without encoding. Avoids decoding errors on some Android scanners. Accents not supported.",
+      qrHelpSms: "— standard format, recommended by default. The QR code contains the link above, with the message encoded.",
+      qrHelpSmsto: "— plain-text message, no encoding. Use it if some Android phones display the message incorrectly (missing “+”, visible “%20”). No accents, QR code only.",
       qrErrorSmstoAccents: "The SMSTO format does not support accents or special characters (é, è, €…). Remove them from the message or choose the “sms: link” format.",
       qrErrorGeneric: "The QR code could not be generated. The message may be too long." }
   };
   // Version affichée en bas de la page : à mettre à jour à chaque publication.
-  const APP_VERSION = '1.2';
+  const APP_VERSION = '1.3';
   const APP_UPDATED = '2026-10-21';
   const STORAGE_KEY = 'sms-tool-lang';
   const QR_FORMAT_KEY = 'sms-tool-qr-format';
@@ -299,6 +307,10 @@
     document.getElementById('qrFormatLabel').textContent = t.qrFormatLabel;
     document.getElementById('qrFormatSms').textContent = t.qrFormatSms;
     document.getElementById('qrFormatSmsto').textContent = t.qrFormatSmsto;
+    document.getElementById('qrHelpSmsTitle').textContent = t.qrFormatSms;
+    document.getElementById('qrHelpSms').textContent = t.qrHelpSms;
+    document.getElementById('qrHelpSmstoTitle').textContent = t.qrFormatSmsto;
+    document.getElementById('qrHelpSmsto').textContent = t.qrHelpSmsto;
     updateQrFormatUi();
   }
 
@@ -364,7 +376,7 @@
   }
   function updateQrFormatUi() {
     const t = translations[currentLang];
-    document.getElementById('qrFormatHint').textContent = qrFormat === 'smsto' ? t.qrHintSmsto : t.qrHintSms;
+    document.querySelectorAll('#qrFormatHelp li').forEach((li) => { li.classList.toggle('is-active', li.dataset.format === qrFormat); });
     const error = document.getElementById('qrError');
     error.textContent = qrErrorKey ? t[qrErrorKey] : '';
     error.hidden = !qrErrorKey;
