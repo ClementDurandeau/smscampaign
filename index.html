@@ -2,442 +2,889 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#c2a8ff">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f5f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f151b" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no">
 <title>Générateur de liens SMS</title>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="vendor/qrcode-generator-2.0.4.js"></script>
 <style>
   :root {
-    --glass-bg: rgba(255, 255, 255, 0.6);
-    --glass-bg-solid: rgba(255, 255, 255, 0.92);
-    --glass-border: rgba(255, 255, 255, 0.7);
-    --glass-shadow: rgba(31, 38, 135, 0.15);
-    --accent: #0071e3;
-    --accent-hover: #0077ed;
-    --text-primary: #1d1d1f;
-    --text-secondary: #6e6e73;
-    --field-bg: rgba(255, 255, 255, 0.65);
-    --field-border: rgba(0, 0, 0, 0.08);
-    --segment-active: #ffffff;
-    --warn: #a14a00;
+    --bg: #f5f7f9;
+    --surface: #ffffff;
+    --board: #e4eaf0;
+    --ink: #15202b;
+    --ink-2: #4c5864;
+    --ink-3: #75808c;
+    --line: #d2d9e0;
+    --line-strong: #aeb9c4;
+    --accent: #2b50e8;
+    --accent-hover: #2142cc;
+    --accent-ink: #ffffff;
+    --accent-soft: #e2e8ff;
+    --warn: #8a5300;
+    --warn-line: #e0a23a;
+    --warn-soft: #fff3dc;
+    --error: #b42318;
+    --error-line: #e5675c;
+    --error-soft: #fde8e6;
+    --slot: #edf1f5;
+    --tick: rgba(21, 32, 43, 0.12);
+    --bezel: #1e2329;
+    --screen: #ffffff;
+    --screen-ink: #111418;
+    --screen-muted: #8a8f96;
+    --screen-line: #e3e5e8;
+    --send: #2b6ef5;
+    --font-ui: "Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --font-phone: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, "Segoe UI", sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --glass-bg: rgba(30, 30, 40, 0.6);
-      --glass-bg-solid: rgba(28, 28, 34, 0.94);
-      --glass-border: rgba(255, 255, 255, 0.12);
-      --glass-shadow: rgba(0, 0, 0, 0.4);
-      --accent: #0a84ff;
-      --accent-hover: #409cff;
-      --text-primary: #f5f5f7;
-      --text-secondary: #a1a1a6;
-      --field-bg: rgba(255, 255, 255, 0.08);
-      --field-border: rgba(255, 255, 255, 0.12);
-      --segment-active: rgba(255, 255, 255, 0.18);
-      --warn: #ffb340;
+      --bg: #0f151b;
+      --surface: #16202a;
+      --board: #1a2530;
+      --ink: #e6ecf2;
+      --ink-2: #a8b3be;
+      --ink-3: #7f8b97;
+      --line: #2a3744;
+      --line-strong: #435363;
+      --accent: #7b96ff;
+      --accent-hover: #9aaeff;
+      --accent-ink: #0f151b;
+      --accent-soft: #24305a;
+      --warn: #f2bd62;
+      --warn-line: #b57d1f;
+      --warn-soft: #33270f;
+      --error: #ff958b;
+      --error-line: #c4473c;
+      --error-soft: #3a1b19;
+      --slot: #223040;
+      --tick: rgba(230, 236, 242, 0.12);
+      --bezel: #050608;
+      --screen: #000000;
+      --screen-ink: #f2f3f5;
+      --screen-muted: #8d929a;
+      --screen-line: #2a2c30;
+      --send: #3b82f6;
     }
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-  html, body { height: 100%; }
-
-  /* Le dégradé vit sur html/body (pas en position:fixed) : il couvre donc
-     toujours toute la page, y compris les bandes qui apparaissent quand la
-     barre d'adresse de Safari se déploie/rétracte sur iOS — un calque
-     purement "fixed" laisserait ces bandes blanches par-dessous. */
-  html {
-    background: linear-gradient(135deg, #a8c0ff 0%, #c2a8ff 35%, #ffb8d9 70%, #ffd8a8 100%);
-  }
   body {
-    background: transparent;
-    background-color: #c2a8ff; /* secours anti-flash si le dégradé html tarde à peindre */
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* chiffres tabulaires uniquement sur le compteur (pas de ponctuation : la police élargit , et . en mode tabulaire) */
+  #countText { font-variant-numeric: tabular-nums; }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- Structure ---------- */
+  .page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: max(28px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  @media (min-width: 720px) { .page { padding-left: 32px; padding-right: 32px; padding-top: 44px; } }
+
+  .masthead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 32px; }
+  h1 { font-size: clamp(26px, 4.2vw, 34px); line-height: 1.12; font-weight: 700; letter-spacing: -0.02em; }
+  .lede { margin-top: 8px; max-width: 58ch; color: var(--ink-2); font-size: 16px; }
+
+  .lang { display: inline-flex; flex-shrink: 0; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--surface); }
+  .lang button { border: 0; background: transparent; border-radius: 6px; padding: 4px 10px; font-size: 13px; font-weight: 600; color: var(--ink-3); min-height: 32px; }
+  .lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (min-width: 1040px) {
+    .layout { grid-template-columns: minmax(340px, 400px) minmax(0, 1fr); gap: 40px; }
+    .compose { padding-top: 28px; }
   }
 
-  /* Calque dédié aux bulles floutées animées : purement décoratif,
-     posé au-dessus du dégradé de base. */
-  .bg {
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    overflow: hidden;
-  }
-  .bg::before, .bg::after {
-    content: ""; position: absolute; border-radius: 50%;
-    filter: blur(70px); opacity: 0.5; will-change: transform;
-  }
-  .bg::before { width: 320px; height: 320px; background: radial-gradient(circle, #ff9de6, transparent 70%); top: -80px; left: -60px; animation: float1 14s ease-in-out infinite; }
-  .bg::after { width: 360px; height: 360px; background: radial-gradient(circle, #6ec3ff, transparent 70%); bottom: -100px; right: -80px; animation: float2 18s ease-in-out infinite; }
-  @keyframes float1 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(40px, 30px) scale(1.1); } }
-  @keyframes float2 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-35px, -20px) scale(1.05); } }
+  h2 { display: flex; align-items: baseline; gap: 10px; font-size: 18px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; margin-bottom: 18px; }
+  .step { color: var(--accent); font-weight: 700; min-width: 0.7em; }
 
-  /* Sur petits écrans : flous réduits et un peu moins d'opacité, moins
-     coûteux pour le GPU des mobiles d'entrée de gamme et moins envahissant
-     visuellement sur une carte plus étroite. */
-  @media (max-width: 480px) {
-    .bg::before { width: 220px; height: 220px; filter: blur(50px); opacity: 0.4; }
-    .bg::after { width: 240px; height: 240px; filter: blur(50px); opacity: 0.4; }
-  }
+  /* ---------- Champs ---------- */
+  .field + .field { margin-top: 22px; }
+  .field-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  label, .label { display: block; font-size: 14px; font-weight: 600; }
+  .field > label, .field > .label { margin-bottom: 8px; }
+  .field-head label { margin: 0; }
+  .tag { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 9px; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-    min-height: 100vh; min-height: 100dvh;
-    display: flex; justify-content: center; align-items: center;
-    padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-    color: var(--text-primary); -webkit-font-smoothing: antialiased;
-    overscroll-behavior-y: contain;
-  }
-
-  .card {
-    --mx: 50%; --my: 0%;
-    position: relative; overflow: hidden; width: 100%; max-width: 440px;
-    margin-block: auto; /* permet un vrai scroll si le contenu dépasse l'écran */
-    background: var(--glass-bg); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
-    border: 1px solid var(--glass-border); border-radius: 28px;
-    box-shadow: 0 8px 32px var(--glass-shadow), inset 0 1px 1px rgba(255, 255, 255, 0.4);
-    padding: clamp(20px, 6vw, 40px);
-  }
-  /* Repli propre si backdrop-filter n'est pas supporté : fond quasi opaque
-     pour garder un bon contraste de lecture. */
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .card { background: var(--glass-bg-solid); }
-  }
-  .card::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(600px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.35), transparent 45%); opacity: 0; transition: opacity 0.4s ease; pointer-events: none; }
-  .card.glow::before { opacity: 1; }
-  .card > * { position: relative; }
-  @media (prefers-color-scheme: dark) { .card::before { background: radial-gradient(600px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.12), transparent 45%); } }
-
-  h1 { font-size: clamp(20px, 5.5vw, 28px); font-weight: 700; text-align: center; letter-spacing: -0.02em; margin-bottom: 6px; }
-  .subtitle { text-align: center; color: var(--text-secondary); font-size: clamp(13px, 3.5vw, 16px); margin-bottom: 28px; }
-  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-  .field { margin-bottom: 20px; }
   input, textarea {
-    width: 100%; background: var(--field-bg); border: 1px solid var(--field-border);
-    border-radius: 14px; padding: 14px 16px; font-size: 16px; /* >=16px : évite le zoom auto iOS */
-    font-family: inherit; color: var(--text-primary);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    display: block; width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 16px; line-height: 1.45;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
-  input::placeholder, textarea::placeholder { color: var(--text-secondary); }
-  input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2); }
-  input:focus-visible, textarea:focus-visible, .btn:focus-visible, .btn-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  textarea { resize: vertical; min-height: 90px; }
+  input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 1; }
+  input:hover, textarea:hover { border-color: var(--line-strong); }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input[aria-invalid="true"] { border-color: var(--error); }
+  input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--error-soft); }
+  #phone { font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
+  #phone::placeholder { font-weight: 400; }
+  textarea { resize: vertical; min-height: 132px; }
 
+  .note { margin-top: 7px; font-size: 13px; line-height: 1.45; color: var(--ink-3); }
+  .note.is-error { color: var(--error); font-weight: 500; }
+
+  /* ---------- Compteur SMS : une case par SMS facturé ---------- */
+  .meter { display: flex; gap: 5px; margin-top: 12px; height: 10px; }
+  .slot {
+    --cap: 160;
+    position: relative; flex: 1; min-width: 0; overflow: hidden;
+    border-radius: 3px;
+    background-color: var(--slot);
+  }
+  .slot::after {
+    /* graduation tous les 10 caractères */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(100% * 10 / var(--cap) - 1px), var(--tick) calc(100% * 10 / var(--cap) - 1px), var(--tick) calc(100% * 10 / var(--cap)));
+  }
+  .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); transition: width 0.18s ease-out; }
+  .slot.is-extra .fill { background: var(--error-line); }
+  .slot.is-extra { background-color: var(--error-soft); }
+  .readout { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+  .readout .segs { font-weight: 600; color: var(--ink); text-align: right; }
+  .readout .segs.is-extra { color: var(--error); }
+
+  /* ---------- Alertes ---------- */
+  .alerts:empty { display: none; }
+  .alerts { display: grid; gap: 8px; margin-top: 12px; }
+  .alert { border-left: 3px solid; border-radius: 4px 8px 8px 4px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; }
+  .alert.warn { border-color: var(--warn-line); background: var(--warn-soft); color: var(--warn); }
+  .alert.error { border-color: var(--error-line); background: var(--error-soft); color: var(--error); }
+  .alert p + p, .alert p + .chips, .alert .chips + button { margin-top: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; min-height: 24px; padding: 1px 8px; border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; border: 1px solid var(--line); }
+  .alert button {
+    display: inline-block; border: 1px solid currentColor; background: transparent;
+    border-radius: 8px; padding: 6px 12px; min-height: 36px;
+    font-size: 13px; font-weight: 600; color: inherit;
+  }
+  .alert button:hover { background: var(--surface); }
+
+  /* ---------- Lien ---------- */
+  .link-box { display: flex; align-items: stretch; gap: 8px; }
+  .link-out {
+    flex: 1; min-width: 0;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 13px;
+    font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55;
+    word-break: break-all; color: var(--ink);
+  }
+  .link-out.is-empty { font-family: var(--font-ui); font-size: 13.5px; color: var(--ink-3); word-break: normal; }
+
+  /* ---------- Boutons ---------- */
   .btn {
-    width: 100%; min-height: 48px; border: none; border-radius: 14px; padding: 15px;
-    font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer;
-    touch-action: manipulation;
-    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 0 16px; border-radius: 10px;
+    font-size: 14.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
+    border: 1px solid transparent; touch-action: manipulation;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
   }
-  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(0, 113, 227, 0.4); }
+  .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
   .btn-primary:hover { background: var(--accent-hover); }
-  .btn-primary:active { transform: scale(0.97); }
-  .result { margin-top: 28px; display: none; }
-  .result.visible { display: block; animation: fadeIn 0.4s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+  .btn-secondary:hover { border-color: var(--line-strong); }
+  .btn-copy { background: var(--surface); color: var(--accent); border-color: var(--line); min-width: 92px; }
+  .btn-copy:hover { border-color: var(--line-strong); }
+  .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
 
-  .url-row { display: flex; gap: 10px; align-items: stretch; }
-  .url-box { flex: 1; min-width: 0; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 14px; padding: 14px 16px; font-size: 14px; word-break: break-all; color: var(--text-primary); }
-  .btn-copy {
-    flex-shrink: 0; min-height: 48px; min-width: 48px; background: var(--field-bg); border: 1px solid var(--field-border);
-    color: var(--accent); border-radius: 14px; padding: 0 20px; font-size: 14px; font-weight: 600;
-    cursor: pointer; touch-action: manipulation; transition: background 0.2s;
+  /* ---------- Plateau de vérification / export ---------- */
+  .board {
+    background: var(--board);
+    border-radius: 22px;
+    padding: 24px 20px 28px;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px;
   }
-  .btn-copy:hover { background: rgba(0, 113, 227, 0.1); }
-
-  .qr-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 24px; }
-  #qrcode {
-    background: #fff; padding: 12px; border-radius: 18px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    line-height: 0; max-width: 100%; display: inline-flex;
+  @media (min-width: 760px) {
+    .board { grid-template-columns: 280px minmax(0, 1fr); gap: 36px; padding: 28px 32px 32px; }
   }
-  #qrcode img, #qrcode canvas { max-width: 100%; height: auto; }
-  .btn-download { margin-top: 18px; background: var(--field-bg); border: 1px solid var(--field-border); color: var(--text-primary); }
-  .btn-download:hover { background: rgba(0, 0, 0, 0.05); }
+  .verify { display: flex; flex-direction: column; align-items: flex-start; }
+  .verify .btn { margin-top: 18px; width: min(280px, 100%); }
+  .verify .note { max-width: 280px; }
 
-  /* Sélecteur de format du QR (contrôle segmenté à deux options) */
-  .qr-format { margin-top: 24px; margin-bottom: 0; }
-  .field-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-  .segmented { display: flex; gap: 4px; padding: 4px; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 14px; }
+  /* Téléphone : maquette fidèle, la seule ombre portée de la page */
+  .device {
+    width: min(280px, 100%); aspect-ratio: 280 / 560; max-height: 560px;
+    padding: 10px; border-radius: 46px;
+    background: var(--bezel);
+    box-shadow: 0 1px 0 1px rgba(255, 255, 255, 0.06) inset, 0 24px 48px -18px rgba(15, 25, 40, 0.45), 0 8px 16px -8px rgba(15, 25, 40, 0.3);
+  }
+  .screen {
+    position: relative; height: 100%; overflow: hidden;
+    border-radius: 37px; background: var(--screen); color: var(--screen-ink);
+    font-family: var(--font-phone);
+    display: flex; flex-direction: column;
+  }
+  .island { position: absolute; top: 9px; left: 50%; width: 82px; height: 24px; margin-left: -41px; border-radius: 14px; background: #000; }
+  .status { display: flex; justify-content: space-between; align-items: center; padding: 12px 22px 0 28px; height: 40px; font-size: 13px; font-weight: 600; }
+  .status svg { height: 11px; width: auto; display: block; }
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+  .convo-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 12px 10px; border-bottom: 1px solid var(--screen-line); }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(#a5abb4, #868c95); display: grid; place-items: center; }
+  .avatar svg { width: 24px; height: 24px; }
+  .convo-name { font-size: 12px; font-weight: 600; letter-spacing: 0.01em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .convo-name.is-empty { color: var(--screen-muted); font-weight: 500; }
+  .convo-body { flex: 1; display: flex; justify-content: center; padding-top: 14px; min-height: 40px; }
+  .convo-service { font-size: 11px; color: var(--screen-muted); }
+  .composer { display: flex; align-items: flex-end; gap: 6px; padding: 8px 10px 22px; }
+  .composer-field {
+    flex: 1; min-width: 0; max-height: 300px; overflow-y: auto;
+    border: 1px solid var(--screen-line); border-radius: 18px;
+    padding: 7px 12px; font-size: 14px; line-height: 1.35;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .composer-field.is-empty { color: var(--screen-muted); }
+  .send { width: 28px; height: 28px; border-radius: 50%; background: var(--send); display: grid; place-items: center; flex-shrink: 0; margin-bottom: 3px; }
+  .send svg { width: 14px; height: 14px; }
+  .device { container-type: inline-size; }
+  @container (max-width: 270px) {
+    .status { padding: 12px 14px 0 22px; }
+    .status-icons svg:nth-child(2) { display: none; }
+  }
+  .home-bar { position: absolute; bottom: 7px; left: 50%; width: 96px; height: 4px; margin-left: -48px; border-radius: 2px; background: var(--screen-ink); opacity: 0.85; }
+
+  /* ---------- Export du QR ---------- */
+  .segmented { display: flex; gap: 3px; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 11px; }
   .segment { flex: 1; position: relative; margin: 0; font-weight: 600; cursor: pointer; }
-  .segment input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-  .segment span {
-    display: flex; align-items: center; justify-content: center; text-align: center;
-    min-height: 40px; padding: 6px 10px; border-radius: 10px;
-    font-size: 14px; color: var(--text-secondary);
-    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  }
-  .segment input:checked + span { background: var(--segment-active); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+  .segment input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; border: 0; }
+  .segment span { display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 4px 10px; border-radius: 8px; font-size: 14px; color: var(--ink-2); text-align: center; transition: background-color 0.15s, color 0.15s; }
+  .segment input:checked + span { background: var(--ink); color: var(--bg); }
   .segment input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .hint { margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--text-secondary); }
-  /* Aide au choix du format : les deux options restent visibles, l'option active est mise en avant */
-  .format-help { list-style: none; margin-top: 10px; display: grid; gap: 6px; font-size: 13px; line-height: 1.4; color: var(--text-secondary); }
-  .format-help li { padding-left: 10px; border-left: 2px solid transparent; transition: color 0.2s, border-color 0.2s; }
-  .format-help li.is-active { color: var(--text-primary); border-left-color: var(--accent); }
+
+  .format-help { list-style: none; margin-top: 12px; display: grid; gap: 7px; font-size: 13px; line-height: 1.45; color: var(--ink-3); }
+  .format-help li { padding-left: 11px; border-left: 2px solid transparent; }
+  .format-help li.is-active { color: var(--ink); border-left-color: var(--accent); }
   .format-help strong { font-weight: 600; }
-  .hint.warn { color: var(--warn); font-weight: 500; }
-  .hint[hidden], .qr-wrap[hidden] { display: none; }
 
-  .version { margin-top: 24px; text-align: center; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-
-  .toast {
-    position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); left: 50%;
-    transform: translateX(-50%) translateY(100px); max-width: calc(100vw - 32px);
-    background: rgba(30, 30, 40, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    color: #fff; padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 500; text-align: center;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); opacity: 0;
-    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.4s; z-index: 100;
+  .qr-area { margin-top: 22px; display: grid; gap: 16px; width: 232px; max-width: 100%; }
+  .qr-frame { width: 232px; max-width: 100%; }
+  .qr-canvas { background: #fff; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; line-height: 0; }
+  .qr-canvas svg { display: block; width: 100%; height: auto; }
+  .qr-frame figcaption { margin-top: 8px; font-size: 12.5px; color: var(--ink-3); }
+  .qr-empty {
+    width: 232px; max-width: 100%; aspect-ratio: 1; border-radius: 14px;
+    border: 1.5px dashed var(--line-strong);
+    display: grid; place-items: center; padding: 24px; text-align: center;
+    font-size: 13.5px; color: var(--ink-3);
   }
-  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .downloads { display: grid; gap: 10px; align-content: start; }
+  .downloads .btn { width: 100%; }
 
-  @media (max-width: 400px) {
-    .url-row { flex-direction: column; }
-    .btn-copy { padding: 12px; width: 100%; }
-  }
+  .foot { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-3); }
 
-  /* Petites hauteurs (clavier ouvert en paysage, etc.) : on quitte le
-     centrage vertical strict pour éviter que le haut de la carte soit
-     coupé, et on laisse défiler normalement. */
-  @media (max-height: 560px) {
-    body { align-items: flex-start; }
-    .card { margin-top: max(16px, env(safe-area-inset-top)); }
-  }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
-    .bg::before, .bg::after { animation: none !important; }
-    .card::before { transition: none !important; }
+    *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
   }
 </style>
 </head>
 <body>
-  <div class="bg" aria-hidden="true"></div>
-  <div class="card">
-    <h1 id="title"></h1>
-    <p class="subtitle" id="subtitle"></p>
-    <div class="field">
-      <label id="phoneLabel" for="phone"></label>
-      <input type="tel" id="phone" inputmode="tel" autocomplete="tel" placeholder="">
+<div class="page">
+  <header class="masthead">
+    <div>
+      <h1 data-i18n="title"></h1>
+      <p class="lede" data-i18n="lede"></p>
     </div>
-    <div class="field">
-      <label id="textLabel" for="text"></label>
-      <textarea id="text" placeholder=""></textarea>
+    <div class="lang" role="group" data-i18n-aria="langLabel">
+      <button type="button" data-lang="fr" lang="fr">FR</button>
+      <button type="button" data-lang="en" lang="en">EN</button>
     </div>
-    <button class="btn btn-primary" id="generateBtn" onclick="generate()"></button>
-    <div class="result" id="result">
-      <div class="field" style="margin-top: 8px;">
-        <label id="urlLabel"></label>
-        <div class="url-row">
-          <div class="url-box" id="urlBox"></div>
-          <button class="btn-copy" id="copyBtn" onclick="copyLink()"></button>
+  </header>
+
+  <main class="layout">
+    <!-- 1. Saisie -->
+    <section class="compose" aria-labelledby="step1">
+      <h2 id="step1"><span class="step">1</span><span data-i18n="step1"></span></h2>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="phone" data-i18n="phoneLabel"></label>
+          <span class="tag" id="phoneTag" hidden></span>
+        </div>
+        <input id="phone" type="tel" inputmode="tel" autocomplete="off" spellcheck="false" aria-describedby="phoneNote">
+        <p class="note" id="phoneNote"></p>
+      </div>
+
+      <div class="field">
+        <label for="message" data-i18n="messageLabel"></label>
+        <textarea id="message" rows="5" aria-describedby="smsReadout"></textarea>
+        <div class="meter" id="meter" aria-hidden="true"></div>
+        <div class="readout" id="smsReadout">
+          <span id="countText"></span>
+          <span class="segs" id="segText"></span>
+        </div>
+        <div class="alerts" id="smsAlerts" aria-live="polite"></div>
+      </div>
+
+      <div class="field">
+        <span class="label" id="linkLabel" data-i18n="linkLabel"></span>
+        <div class="link-box">
+          <output class="link-out" id="linkOut" aria-labelledby="linkLabel"></output>
+          <button type="button" class="btn btn-copy" id="copyBtn"></button>
         </div>
       </div>
-      <div class="field qr-format">
-        <span class="field-label" id="qrFormatLabel"></span>
-        <div class="segmented" role="radiogroup" aria-labelledby="qrFormatLabel">
-          <label class="segment"><input type="radio" name="qrFormat" value="sms" checked><span id="qrFormatSms"></span></label>
-          <label class="segment"><input type="radio" name="qrFormat" value="smsto"><span id="qrFormatSmsto"></span></label>
+    </section>
+
+    <div class="board">
+      <!-- 2. Vérification -->
+      <section class="verify" aria-labelledby="step2">
+        <h2 id="step2"><span class="step">2</span><span data-i18n="step2"></span></h2>
+        <div class="device" role="img" id="device">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status">
+              <span>9:41</span>
+              <span class="status-icons">
+                <svg viewBox="0 0 17 11" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+                <svg viewBox="0 0 15 11" fill="currentColor" aria-hidden="true"><path d="M7.5 2.2c2.1 0 4 .8 5.4 2.1l1.1-1.1A9.2 9.2 0 0 0 7.5.6 9.2 9.2 0 0 0 1 3.2l1.1 1.1a7.7 7.7 0 0 1 5.4-2.1Zm0 3.2c1.2 0 2.4.5 3.2 1.3l1.1-1.1a6.1 6.1 0 0 0-8.6 0l1.1 1.1c.8-.8 2-1.3 3.2-1.3Zm0 3.2c-.4 0-.8.2-1.1.5L7.5 10.2l1.1-1.1a1.6 1.6 0 0 0-1.1-.5Z"/></svg>
+                <svg viewBox="0 0 26 12" aria-hidden="true"><rect x="0.5" y="0.5" width="22" height="11" rx="3.2" fill="none" stroke="currentColor" opacity="0.4"/><rect x="2" y="2" width="16" height="8" rx="2" fill="currentColor"/><rect x="24" y="4" width="1.6" height="4" rx="0.8" fill="currentColor" opacity="0.4"/></svg>
+              </span>
+            </div>
+            <div class="convo-head">
+              <span class="avatar"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><circle cx="12" cy="8.5" r="4.2"/><path d="M3.8 21c.7-4.3 4.1-6.7 8.2-6.7s7.5 2.4 8.2 6.7Z"/></svg></span>
+              <span class="convo-name" id="pvNumber"></span>
+            </div>
+            <div class="convo-body"><span class="convo-service">SMS</span></div>
+            <div class="composer">
+              <div class="composer-field" id="pvText"></div>
+              <span class="send"><svg viewBox="0 0 14 14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 12V2.5M2.8 6.5 7 2.3l4.2 4.2"/></svg></span>
+            </div>
+            <div class="home-bar"></div>
+          </div>
         </div>
-        <ul class="format-help" id="qrFormatHelp">
-          <li data-format="sms"><strong id="qrHelpSmsTitle"></strong> <span id="qrHelpSms"></span></li>
-          <li data-format="smsto"><strong id="qrHelpSmstoTitle"></strong> <span id="qrHelpSmsto"></span></li>
+        <a class="btn btn-secondary" id="openBtn">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h14v9H8.5L5 16.5v-3H3Z"/></svg>
+          <span data-i18n="open"></span>
+        </a>
+        <p class="note" data-i18n="openHelp"></p>
+      </section>
+
+      <!-- 3. Export -->
+      <section aria-labelledby="step3">
+        <h2 id="step3"><span class="step">3</span><span data-i18n="step3"></span></h2>
+        <span class="label" id="formatLabel" data-i18n="formatLabel" style="margin-bottom: 8px;"></span>
+        <div class="segmented" role="radiogroup" aria-labelledby="formatLabel">
+          <label class="segment"><input type="radio" name="qrFormat" value="sms"><span data-i18n="fmtSms"></span></label>
+          <label class="segment"><input type="radio" name="qrFormat" value="smsto"><span data-i18n="fmtSmsto"></span></label>
+        </div>
+        <ul class="format-help" id="formatHelp">
+          <li data-format="sms"><strong data-i18n="fmtSms"></strong>. <span data-i18n="fmtSmsHelp"></span></li>
+          <li data-format="smsto"><strong data-i18n="fmtSmsto"></strong>. <span data-i18n="fmtSmstoHelp"></span></li>
         </ul>
-        <p class="hint warn" id="qrError" role="alert" hidden></p>
-      </div>
-      <div class="qr-wrap">
-        <div id="qrcode"></div>
-        <button class="btn btn-download" id="downloadBtn" onclick="downloadQR()"></button>
-      </div>
+        <div class="alerts" id="qrAlerts" aria-live="polite"></div>
+
+        <div class="qr-area">
+          <div>
+            <figure class="qr-frame" id="qrFrame" hidden>
+              <div class="qr-canvas" id="qr" role="img"></div>
+              <figcaption id="qrMeta"></figcaption>
+            </figure>
+            <p class="qr-empty" id="qrEmpty"></p>
+          </div>
+          <div class="downloads">
+            <button type="button" class="btn btn-primary" id="pngBtn">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 16.5h12"/></svg>
+              <span data-i18n="dlPng"></span>
+            </button>
+            <button type="button" class="btn btn-secondary" id="svgBtn">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 16.5h12"/></svg>
+              <span data-i18n="dlSvg"></span>
+            </button>
+            <p class="note" id="dlNote"></p>
+          </div>
+        </div>
+      </section>
     </div>
-    <p class="version" id="version"></p>
-  </div>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <footer class="foot"><p id="version"></p></footer>
+</div>
+
 <script>
-  const translations = {
-    fr: { title: "Générateur de liens SMS", subtitle: "Créez une campagne SMS en quelques secondes", phoneLabel: "Numéro de téléphone", textLabel: "Message", generateBtn: "Générer", urlLabel: "Lien de campagne", copyBtn: "Copier", downloadBtn: "Télécharger le QR (JPG)", phonePlaceholder: "+33 6 12 34 56 78", textPlaceholder: "Votre message...", alertPhone: "Veuillez saisir un numéro de téléphone.", copied: "Lien copié dans le presse-papiers !", docTitle: "Générateur de liens SMS", updated: "Mis à jour le",
-      qrFormatLabel: "Format du QR code", qrFormatSms: "Lien sms:", qrFormatSmsto: "Texte SMSTO",
-      qrHelpSms: "— format standard, recommandé par défaut. Le QR contient le lien ci-dessus, message encodé.",
-      qrHelpSmsto: "— message en texte brut, sans encodage. À utiliser si certains Android affichent mal le message (« + » disparus, « %20 » visibles). Sans accents, QR uniquement.",
-      qrErrorSmstoAccents: "Le format SMSTO n'accepte pas les accents ni les caractères spéciaux (é, è, €…). Retirez-les du message ou choisissez le format « Lien sms: ».",
-      qrErrorGeneric: "Le QR code n'a pas pu être généré. Le message est peut-être trop long." },
-    en: { title: "SMS Link Generator", subtitle: "Create an SMS campaign in seconds", phoneLabel: "Phone number", textLabel: "Message", generateBtn: "Generate", urlLabel: "Campaign link", copyBtn: "Copy", downloadBtn: "Download QR (JPG)", phonePlaceholder: "+1 514 555 0123", textPlaceholder: "Your message...", alertPhone: "Please enter a phone number.", copied: "Link copied to clipboard!", docTitle: "SMS Link Generator", updated: "Updated",
-      qrFormatLabel: "QR code format", qrFormatSms: "sms: link", qrFormatSmsto: "SMSTO text",
-      qrHelpSms: "— standard format, recommended by default. The QR code contains the link above, with the message encoded.",
-      qrHelpSmsto: "— plain-text message, no encoding. Use it if some Android phones display the message incorrectly (missing “+”, visible “%20”). No accents, QR code only.",
-      qrErrorSmstoAccents: "The SMSTO format does not support accents or special characters (é, è, €…). Remove them from the message or choose the “sms: link” format.",
-      qrErrorGeneric: "The QR code could not be generated. The message may be too long." }
-  };
+(function () {
+  'use strict';
+
   // Version affichée en bas de la page : à mettre à jour à chaque publication.
-  const APP_VERSION = '1.3';
+  const APP_VERSION = '2.0';
   const APP_UPDATED = '2026-10-21';
-  const STORAGE_KEY = 'sms-tool-lang';
-  const QR_FORMAT_KEY = 'sms-tool-qr-format';
-  let currentLang = 'fr';
-  let currentUrl = '';
-  let currentPhone = '';
-  let currentText = '';
-  let qrFormat = 'sms'; // 'sms' (lien sms:?body=) ou 'smsto' (SMSTO:numéro:message)
-  let qrErrorKey = '';  // clé de traduction du message d'erreur QR affiché, '' si aucun
+  const LANG_KEY = 'sms-tool-lang';
+  const FORMAT_KEY = 'sms-tool-qr-format';
 
-  function detectInitialLang() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && translations[saved]) return saved;
-    const nav = (navigator.language || 'fr').toLowerCase();
-    if (nav.startsWith('en')) return 'en';
-    if (nav.startsWith('fr')) return 'fr';
-    return 'fr';
-  }
-  function setLang(lang) {
-    if (!translations[lang]) return;
-    currentLang = lang;
-    try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) {}
-    const t = translations[lang];
-    document.documentElement.lang = lang;
-    document.title = t.docTitle;
-    document.getElementById('title').textContent = t.title;
-    document.getElementById('subtitle').textContent = t.subtitle;
-    document.getElementById('phoneLabel').textContent = t.phoneLabel;
-    document.getElementById('textLabel').textContent = t.textLabel;
-    document.getElementById('generateBtn').textContent = t.generateBtn;
-    document.getElementById('urlLabel').textContent = t.urlLabel;
-    document.getElementById('copyBtn').textContent = t.copyBtn;
-    document.getElementById('downloadBtn').textContent = t.downloadBtn;
-    document.getElementById('phone').placeholder = t.phonePlaceholder;
-    document.getElementById('text').placeholder = t.textPlaceholder;
-    const updatedDate = new Date(APP_UPDATED + 'T00:00:00Z').toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-    document.getElementById('version').textContent = 'v' + APP_VERSION + ' · ' + t.updated + ' ' + updatedDate;
-    document.getElementById('qrFormatLabel').textContent = t.qrFormatLabel;
-    document.getElementById('qrFormatSms').textContent = t.qrFormatSms;
-    document.getElementById('qrFormatSmsto').textContent = t.qrFormatSmsto;
-    document.getElementById('qrHelpSmsTitle').textContent = t.qrFormatSms;
-    document.getElementById('qrHelpSms').textContent = t.qrHelpSms;
-    document.getElementById('qrHelpSmstoTitle').textContent = t.qrFormatSmsto;
-    document.getElementById('qrHelpSmsto').textContent = t.qrHelpSmsto;
-    updateQrFormatUi();
+  const I18N = {
+    fr: {
+      locale: 'fr-FR',
+      docTitle: 'Générateur de liens SMS',
+      title: 'Générateur de liens SMS',
+      lede: 'Créez le lien et le QR code d’une campagne SMS, puis vérifiez le message avant de le diffuser.',
+      langLabel: 'Langue',
+      step1: 'Composer le SMS',
+      phoneLabel: 'Numéro',
+      phonePh: '72525',
+      phoneHelp: 'Numéro court (ex. 72525) ou numéro mobile.',
+      phoneShort: 'Numéro court',
+      phoneLong: 'Numéro long',
+      phoneErrChars: 'Seuls les chiffres, les espaces et un « + » au début sont acceptés.',
+      phoneErrLength: 'Le numéro doit contenir entre 3 et 15 chiffres.',
+      messageLabel: 'Message',
+      messagePh: 'MOTCLE\nEnvoyez ce SMS sans le modifier (0,99E/SMS + prix du SMS).',
+      count: (n, limit) => n + ' caractère' + (n > 1 ? 's' : '') + ' sur ' + limit,
+      segs: (n, enc) => n + ' SMS, ' + (enc === 'gsm' ? 'alphabet GSM' : 'Unicode'),
+      alertMulti: (n, per) => 'Le message part en ' + n + ' SMS : sur un numéro surtaxé, chaque SMS peut être facturé. En envoi multiple, chaque SMS contient ' + per + ' caractères au maximum.',
+      alertUcs2: 'Ces caractères ne font pas partie de l’alphabet GSM. Ils font passer le SMS en Unicode, limité à 70 caractères :',
+      alertUcs2Left: 'Ces caractères n’ont pas d’équivalent dans l’alphabet GSM et doivent être retirés à la main :',
+      fixBtn: 'Remplacer par des caractères compatibles',
+      alertExt: 'Ces caractères comptent chacun pour 2 :',
+      charNames: { ' ': 'espace insécable', ' ': 'espace fine insécable', ' ': 'espace fine', ' ': 'espace', ' ': 'espace', ' ': 'espace', '​': 'espace invisible', '\t': 'tabulation', '\f': 'saut de page' },
+      linkLabel: 'Lien de campagne',
+      linkEmpty: 'Le lien apparaît dès qu’un numéro valide est saisi.',
+      copy: 'Copier',
+      copied: 'Copié',
+      copyFail: 'Échec',
+      step2: 'Vérifier le message',
+      deviceLabel: 'Aperçu du SMS pré-rempli dans l’application Messages',
+      pvNumberEmpty: 'Numéro',
+      pvTextEmpty: 'Message',
+      open: 'Ouvrir dans Messages',
+      openHelp: 'Ouvre l’application Messages de cet appareil avec le SMS pré-rempli, sans l’envoyer.',
+      step3: 'Exporter le QR code',
+      formatLabel: 'Format du QR code',
+      fmtSms: 'Lien SMS',
+      fmtSmsto: 'Texte SMSTO',
+      fmtSmsHelp: 'Format standard, recommandé par défaut. Le QR contient le lien de campagne.',
+      fmtSmstoHelp: 'Message en texte brut, sans encodage. À utiliser si certains Android affichent mal le message (« + » disparus, « %20 » visibles). Réservé au QR code.',
+      smstoAccent: 'Le message contient des accents ou caractères spéciaux : en SMSTO, certains scanners peuvent les afficher mal. Préférez un message sans accent, ou le format Lien SMS.',
+      qrEmpty: 'Le QR code apparaît dès qu’un numéro valide est saisi.',
+      qrError: 'Le QR code n’a pas pu être généré : le message est trop long.',
+      qrAlt: 'QR code de la campagne',
+      qrModules: (n) => n + ' × ' + n + ' modules',
+      qrDense: 'QR dense : un message plus court se scanne plus facilement de loin.',
+      dlPng: 'Télécharger en PNG',
+      dlSvg: 'Télécharger en SVG',
+      dlNote: (px) => 'PNG de ' + px + ' × ' + px + ' px. SVG vectoriel, adapté à l’impression.',
+      version: (v, d) => 'Version ' + v + ', mise à jour le ' + d
+    },
+    en: {
+      locale: 'en-US',
+      docTitle: 'SMS Link Generator',
+      title: 'SMS link generator',
+      lede: 'Create the link and QR code for an SMS campaign, then check the message before it goes out.',
+      langLabel: 'Language',
+      step1: 'Write the SMS',
+      phoneLabel: 'Number',
+      phonePh: '72525',
+      phoneHelp: 'Short code (e.g. 72525) or mobile number.',
+      phoneShort: 'Short code',
+      phoneLong: 'Long number',
+      phoneErrChars: 'Only digits, spaces and a leading “+” are allowed.',
+      phoneErrLength: 'The number must have between 3 and 15 digits.',
+      messageLabel: 'Message',
+      messagePh: 'KEYWORD\nSend this SMS without changing it (0.99E/SMS + SMS price).',
+      count: (n, limit) => n + ' character' + (n === 1 ? '' : 's') + ' of ' + limit,
+      segs: (n, enc) => n + ' SMS, ' + (enc === 'gsm' ? 'GSM alphabet' : 'Unicode'),
+      alertMulti: (n, per) => 'The message is sent as ' + n + ' SMS: on a premium-rate number, each SMS may be billed. In a multi-part send, each SMS holds at most ' + per + ' characters.',
+      alertUcs2: 'These characters are not in the GSM alphabet. They switch the SMS to Unicode, limited to 70 characters:',
+      alertUcs2Left: 'These characters have no GSM equivalent and must be removed by hand:',
+      fixBtn: 'Replace with compatible characters',
+      alertExt: 'These characters count as 2 each:',
+      charNames: { ' ': 'non-breaking space', ' ': 'narrow non-breaking space', ' ': 'thin space', ' ': 'space', ' ': 'space', ' ': 'space', '​': 'zero-width space', '\t': 'tab', '\f': 'form feed' },
+      linkLabel: 'Campaign link',
+      linkEmpty: 'The link appears once a valid number is entered.',
+      copy: 'Copy',
+      copied: 'Copied',
+      copyFail: 'Failed',
+      step2: 'Check the message',
+      deviceLabel: 'Preview of the pre-filled SMS in the Messages app',
+      pvNumberEmpty: 'Number',
+      pvTextEmpty: 'Message',
+      open: 'Open in Messages',
+      openHelp: 'Opens this device’s Messages app with the pre-filled SMS, without sending it.',
+      step3: 'Export the QR code',
+      formatLabel: 'QR code format',
+      fmtSms: 'SMS link',
+      fmtSmsto: 'SMSTO text',
+      fmtSmsHelp: 'Standard format, recommended by default. The QR code contains the campaign link.',
+      fmtSmstoHelp: 'Plain-text message, no encoding. Use it if some Android phones display the message incorrectly (missing “+”, visible “%20”). QR code only.',
+      smstoAccent: 'The message contains accents or special characters: with SMSTO, some scanners may display them incorrectly. Prefer a message without accents, or the SMS link format.',
+      qrEmpty: 'The QR code appears once a valid number is entered.',
+      qrError: 'The QR code could not be generated: the message is too long.',
+      qrAlt: 'Campaign QR code',
+      qrModules: (n) => n + ' × ' + n + ' modules',
+      qrDense: 'Dense QR code: a shorter message is easier to scan from a distance.',
+      dlPng: 'Download PNG',
+      dlSvg: 'Download SVG',
+      dlNote: (px) => 'PNG at ' + px + ' × ' + px + ' px. Vector SVG, suited for print.',
+      version: (v, d) => 'Version ' + v + ', updated ' + d
+    }
+  };
+
+  // ---------- Stockage local (préférences de l'utilisateur uniquement) ----------
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  // ---------- Alphabet GSM 03.38 ----------
+  // Un SMS en alphabet GSM tient en 160 caractères (153 par SMS en envoi multiple).
+  // Un seul caractère hors alphabet fait passer tout le SMS en Unicode : 70 (67).
+  const GSM_BASIC = new Set(Array.from('@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà'));
+  const GSM_EXT = new Set(Array.from('^{}\\[~]|€\f')); // comptent pour 2
+
+  function analyzeSms(text) {
+    const chars = Array.from(text);
+    const nonGsm = [];
+    const ext = [];
+    for (const c of chars) {
+      if (GSM_BASIC.has(c)) continue;
+      if (GSM_EXT.has(c)) { if (!ext.includes(c)) ext.push(c); continue; }
+      if (!nonGsm.includes(c)) nonGsm.push(c);
+    }
+    if (nonGsm.length === 0) {
+      let units = 0;
+      for (const c of chars) units += GSM_EXT.has(c) ? 2 : 1;
+      return { encoding: 'gsm', units, limit: 160, per: 153, segments: units === 0 ? 0 : (units <= 160 ? 1 : Math.ceil(units / 153)), nonGsm, ext };
+    }
+    const units = text.length; // unités UTF-16 : un emoji compte pour 2
+    return { encoding: 'ucs2', units, limit: 70, per: 67, segments: units <= 70 ? 1 : Math.ceil(units / 67), nonGsm, ext: [] };
   }
 
-  // Taille de QR adaptative : pleine largeur disponible dans la carte,
-  // plafonnée à 220px, pour ne jamais déborder sur les très petits écrans.
-  function getQrSize() {
-    const card = document.querySelector('.card');
-    const cardInner = card.clientWidth - 2 * parseFloat(getComputedStyle(card).paddingLeft) - 24; // 24 = padding interne du cadre blanc
-    return Math.max(140, Math.min(220, cardInner));
+  // Remplacements vers l'alphabet GSM (déclenchés uniquement par le bouton)
+  const GSM_REPLACEMENTS = {
+    '’': "'", '‘': "'", '‚': "'", '′': "'", '´': "'", '`': "'",
+    '“': '"', '”': '"', '„': '"', '«': '"', '»': '"', '″': '"',
+    '–': '-', '—': '-', '‐': '-', '‑': '-', '−': '-',
+    '…': '...', '•': '-', '·': '.',
+    ' ': ' ', ' ': ' ', ' ': ' ', ' ': ' ', ' ': ' ', ' ': ' ', '​': '', '\t': ' ',
+    'œ': 'oe', 'Œ': 'OE', 'ç': 'c'
+  };
+  function toGsm(text) {
+    // « texte » -> "texte" : les espaces collées aux guillemets français disparaissent
+    text = text.replace(/«[   ]*/g, '"').replace(/[   ]*»/g, '"');
+    return Array.from(text).map((c) => {
+      if (GSM_BASIC.has(c) || GSM_EXT.has(c)) return c;
+      if (Object.prototype.hasOwnProperty.call(GSM_REPLACEMENTS, c)) return GSM_REPLACEMENTS[c];
+      const base = c.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return (base && Array.from(base).every((b) => GSM_BASIC.has(b))) ? base : c;
+    }).join('');
   }
 
-  // Encode le corps du SMS en laissant en clair , / : (autorisés dans un lien),
-  // pour que les scanners QR Android qui décodent mal ne les altèrent pas.
+  // ---------- Numéro ----------
+  function analyzePhone(raw) {
+    const value = raw.trim();
+    if (!value) return { state: 'empty' };
+    const clean = value.replace(/[\s().-]/g, '');
+    if (!/^\+?\d+$/.test(clean)) return { state: 'invalid', reason: 'chars' };
+    const digits = clean.replace('+', '');
+    if (digits.length < 3 || digits.length > 15) return { state: 'invalid', reason: 'length' };
+    return { state: 'ok', clean, kind: (!clean.startsWith('+') && digits.length <= 6) ? 'short' : 'long' };
+  }
+
+  // ---------- Lien et contenu du QR ----------
+  // , / : restent en clair (autorisés dans un lien) pour limiter ce qu'un scanner
+  // Android qui décode mal peut altérer.
   function encodeSmsBody(text) {
     return encodeURIComponent(text).replace(/%2C|%2F|%3A/gi, decodeURIComponent);
   }
-
-  function generate() {
-    const phone = document.getElementById('phone').value.trim();
-    const text = document.getElementById('text').value.trim();
-    if (!phone) { showToast(translations[currentLang].alertPhone); return; }
-    const cleanPhone = phone.replace(/[\s()-]/g, '');
-    currentPhone = cleanPhone;
-    currentText = text;
-    currentUrl = 'sms:' + cleanPhone;
-    if (text) { currentUrl += '?' + 'body=' + encodeSmsBody(text); }
-    document.getElementById('urlBox').textContent = currentUrl;
-    renderQr();
-    document.getElementById('result').classList.add('visible');
-    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  function buildLink(phone, text) {
+    return 'sms:' + phone + (text ? '?body=' + encodeSmsBody(text) : '');
+  }
+  // SMSTO:numéro:message, message en texte brut : le scanner n'a rien à décoder.
+  // Format propre aux QR codes, pas utilisable comme lien cliquable.
+  function buildQrContent(format, phone, text, link) {
+    if (format === 'smsto') return 'SMSTO:' + phone + (text ? ':' + text : '');
+    return link;
   }
 
-  // Contenu encodé dans le QR selon le format choisi :
-  // - 'sms'   : le lien de campagne (sms:numéro?body=message encodé)
-  // - 'smsto' : SMSTO:numéro:message, message en texte brut sans aucun encodage.
-  //   Le scanner n'a rien à décoder (pas de + transformé en espace, pas de %XX).
-  //   Format propre aux QR codes : il n'est pas utilisable comme lien cliquable.
-  function buildQrContent() {
-    if (qrFormat === 'smsto') return 'SMSTO:' + currentPhone + (currentText ? ':' + currentText : '');
-    return currentUrl;
+  // ---------- QR (qrcode-generator, UTF-8 sans BOM) ----------
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+  const QUIET = 4; // marge blanche réglementaire : 4 modules
+
+  function makeQr(content) {
+    const qr = qrcode(0, 'M');
+    qr.addData(content, 'Byte');
+    qr.make();
+    return qr;
   }
-  function renderQr() {
-    const qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = '';
-    qrErrorKey = '';
-    // SMSTO + caractère non-ASCII : qrcodejs 1.0.0 calcule mal la taille du QR
-    // dès qu'un texte UTF-8 dépasse quelques caractères ("code length overflow"),
-    // et le BOM qu'il ajoute peut empêcher les scanners de reconnaître "SMSTO:".
-    // Le format sms: n'est pas concerné : le lien encodé est 100 % ASCII.
-    if (qrFormat === 'smsto' && /[^\x00-\x7F]/.test(currentText)) {
-      qrErrorKey = 'qrErrorSmstoAccents';
-    } else {
-      try {
-        const size = getQrSize();
-        new QRCode(qrContainer, { text: buildQrContent(), width: size, height: size, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-      } catch (e) {
-        qrContainer.innerHTML = '';
-        qrErrorKey = 'qrErrorGeneric';
+  function qrSvg(qr) {
+    const n = qr.getModuleCount();
+    const size = n + QUIET * 2;
+    let d = '';
+    for (let r = 0; r < n; r++) {
+      let c = 0;
+      while (c < n) {
+        if (!qr.isDark(r, c)) { c++; continue; }
+        let run = 1;
+        while (c + run < n && qr.isDark(r, c + run)) run++;
+        d += 'M' + (c + QUIET) + ' ' + (r + QUIET) + 'h' + run + 'v1h-' + run + 'z';
+        c += run;
       }
     }
-    document.querySelector('.qr-wrap').hidden = !!qrErrorKey;
-    updateQrFormatUi();
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="' + (size * 8) + '" height="' + (size * 8) + '" shape-rendering="crispEdges">' +
+      '<rect width="' + size + '" height="' + size + '" fill="#ffffff"/><path fill="#000000" d="' + d + '"/></svg>';
   }
-  function updateQrFormatUi() {
-    const t = translations[currentLang];
-    document.querySelectorAll('#qrFormatHelp li').forEach((li) => { li.classList.toggle('is-active', li.dataset.format === qrFormat); });
-    const error = document.getElementById('qrError');
-    error.textContent = qrErrorKey ? t[qrErrorKey] : '';
-    error.hidden = !qrErrorKey;
+  function pngScale(qr) {
+    const size = qr.getModuleCount() + QUIET * 2;
+    return Math.ceil(1024 / size); // modules à taille entière : bords nets
   }
-  function setQrFormat(format) {
-    qrFormat = format === 'smsto' ? 'smsto' : 'sms';
-    try { localStorage.setItem(QR_FORMAT_KEY, qrFormat); } catch (e) {}
-    document.querySelectorAll('input[name="qrFormat"]').forEach((r) => { r.checked = r.value === qrFormat; });
-    if (currentUrl) renderQr(); else updateQrFormatUi();
+  function qrPngBlob(qr, done) {
+    const n = qr.getModuleCount();
+    const scale = pngScale(qr);
+    const px = (n + QUIET * 2) * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = px; canvas.height = px;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, px, px);
+    ctx.fillStyle = '#000000';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect((c + QUIET) * scale, (r + QUIET) * scale, scale, scale);
+    }
+    canvas.toBlob(done, 'image/png');
   }
-  function copyLink() {
-    if (!currentUrl) return;
-    navigator.clipboard.writeText(currentUrl).then(() => { showToast(translations[currentLang].copied); }).catch(() => {
-      const ta = document.createElement('textarea'); ta.value = currentUrl; document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); showToast(translations[currentLang].copied); } catch (e) {} document.body.removeChild(ta);
-    });
+  function download(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
-  function downloadQR() {
-    const qrContainer = document.getElementById('qrcode');
-    const canvas = qrContainer.querySelector('canvas'); const img = qrContainer.querySelector('img');
-    const px = (canvas ? canvas.width : (img ? img.naturalWidth : 220)) || 220;
-    const padding = Math.round(px * 0.045) + 10;
-    const total = px + padding * 2;
-    const finalCanvas = document.createElement('canvas'); finalCanvas.width = total; finalCanvas.height = total;
-    const ctx = finalCanvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, total, total);
-    function finalize() { const link = document.createElement('a'); link.download = qrFormat === 'smsto' ? 'qr-campagne-smsto.jpg' : 'qr-campagne-sms.jpg'; link.href = finalCanvas.toDataURL('image/jpeg', 0.92); link.click(); }
-    if (canvas) { ctx.drawImage(canvas, padding, padding, px, px); finalize(); }
-    else if (img) { const tmp = new Image(); tmp.crossOrigin = 'anonymous'; tmp.onload = () => { ctx.drawImage(tmp, padding, padding, px, px); finalize(); }; tmp.src = img.src; }
-  }
-  function showToast(msg) { const toast = document.getElementById('toast'); toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2500); }
 
-  (function initGlow() {
-    const card = document.querySelector('.card');
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; if (reduceMotion) return;
-    const hasFinePointer = window.matchMedia('(pointer: fine)').matches; if (!hasFinePointer) return;
-    let rafId = null;
-    card.addEventListener('pointermove', (e) => { if (rafId) return; rafId = requestAnimationFrame(() => { const rect = card.getBoundingClientRect(); const x = ((e.clientX - rect.left) / rect.width) * 100; const y = ((e.clientY - rect.top) / rect.height) * 100; card.style.setProperty('--mx', x + '%'); card.style.setProperty('--my', y + '%'); rafId = null; }); });
-    card.addEventListener('pointerenter', () => card.classList.add('glow'));
-    card.addEventListener('pointerleave', () => card.classList.remove('glow'));
-  })();
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    phone: $('phone'), phoneTag: $('phoneTag'), phoneNote: $('phoneNote'),
+    message: $('message'), meter: $('meter'), countText: $('countText'), segText: $('segText'), smsAlerts: $('smsAlerts'),
+    linkOut: $('linkOut'), copyBtn: $('copyBtn'),
+    device: $('device'), pvNumber: $('pvNumber'), pvText: $('pvText'), openBtn: $('openBtn'),
+    formatHelp: $('formatHelp'), qrAlerts: $('qrAlerts'),
+    qrFrame: $('qrFrame'), qr: $('qr'), qrMeta: $('qrMeta'), qrEmpty: $('qrEmpty'),
+    pngBtn: $('pngBtn'), svgBtn: $('svgBtn'), dlNote: $('dlNote'), version: $('version')
+  };
+  const formatRadios = Array.from(document.querySelectorAll('input[name="qrFormat"]'));
+  const langButtons = Array.from(document.querySelectorAll('[data-lang]'));
 
-  // Recalcule la taille du QR si la fenêtre est redimensionnée
-  // (rotation d'écran, changement de fenêtre desktop) et qu'un QR existe déjà.
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (currentUrl) renderQr(); }, 250);
+  let lang = initialLang();
+  let format = store.get(FORMAT_KEY) === 'smsto' ? 'smsto' : 'sms';
+  let current = { phone: null, link: '', qr: null };
+  let copyTimer = null;
+
+  function initialLang() {
+    const saved = store.get(LANG_KEY);
+    if (saved && I18N[saved]) return saved;
+    return (navigator.language || 'fr').toLowerCase().startsWith('en') ? 'en' : 'fr';
+  }
+  const t = () => I18N[lang];
+
+  function node(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function chipsFor(list) {
+    const wrap = node('div', 'chips');
+    list.forEach((c) => wrap.appendChild(node('span', 'chip', t().charNames[c] || c)));
+    return wrap;
+  }
+
+  // ---------- Rendu ----------
+  function render() {
+    const tr = t();
+    const phone = analyzePhone(el.phone.value);
+    const text = el.message.value.trim();
+    const sms = analyzeSms(text);
+
+    // Numéro
+    el.phone.setAttribute('aria-invalid', phone.state === 'invalid' ? 'true' : 'false');
+    el.phoneNote.classList.toggle('is-error', phone.state === 'invalid');
+    el.phoneNote.textContent = phone.state === 'invalid' ? (phone.reason === 'chars' ? tr.phoneErrChars : tr.phoneErrLength) : tr.phoneHelp;
+    el.phoneTag.hidden = phone.state !== 'ok';
+    if (phone.state === 'ok') el.phoneTag.textContent = phone.kind === 'short' ? tr.phoneShort : tr.phoneLong;
+
+    // Compteur : une case par SMS
+    const slots = Math.max(1, sms.segments);
+    const cap = sms.segments > 1 ? sms.per : sms.limit;
+    el.meter.textContent = '';
+    for (let i = 0; i < slots; i++) {
+      const slot = node('span', 'slot' + (i > 0 ? ' is-extra' : ''));
+      slot.style.setProperty('--cap', cap);
+      const fill = node('span', 'fill');
+      const used = Math.min(Math.max(sms.units - i * cap, 0), cap);
+      fill.style.width = (used / cap * 100) + '%';
+      slot.appendChild(fill);
+      el.meter.appendChild(slot);
+    }
+    el.countText.textContent = tr.count(sms.units, sms.limit);
+    el.segText.textContent = sms.segments ? tr.segs(sms.segments, sms.encoding) : '';
+    el.segText.classList.toggle('is-extra', sms.segments > 1);
+
+    el.smsAlerts.textContent = '';
+    if (sms.segments > 1) {
+      const a = node('div', 'alert error');
+      a.appendChild(node('p', null, tr.alertMulti(sms.segments, sms.per)));
+      el.smsAlerts.appendChild(a);
+    }
+    if (sms.nonGsm.length) {
+      const fixable = toGsm(text) !== text;
+      const a = node('div', 'alert warn');
+      a.appendChild(node('p', null, fixable ? tr.alertUcs2 : tr.alertUcs2Left));
+      a.appendChild(chipsFor(sms.nonGsm));
+      if (fixable) {
+        const b = node('button', null, tr.fixBtn);
+        b.type = 'button';
+        b.addEventListener('click', () => { el.message.value = toGsm(el.message.value); render(); el.message.focus(); });
+        a.appendChild(b);
+      }
+      el.smsAlerts.appendChild(a);
+    }
+    if (sms.ext.length) {
+      const a = node('div', 'alert warn');
+      a.appendChild(node('p', null, tr.alertExt));
+      a.appendChild(chipsFor(sms.ext));
+      el.smsAlerts.appendChild(a);
+    }
+
+    // Lien
+    const ok = phone.state === 'ok';
+    current.phone = ok ? phone.clean : null;
+    current.link = ok ? buildLink(phone.clean, text) : '';
+    el.linkOut.classList.toggle('is-empty', !ok);
+    el.linkOut.textContent = ok ? current.link : tr.linkEmpty;
+    el.copyBtn.disabled = !ok;
+    if (!copyTimer) el.copyBtn.textContent = tr.copy;
+
+    // Aperçu
+    el.pvNumber.textContent = ok ? phone.clean : tr.pvNumberEmpty;
+    el.pvNumber.classList.toggle('is-empty', !ok);
+    el.pvText.textContent = text || tr.pvTextEmpty;
+    el.pvText.classList.toggle('is-empty', !text);
+    if (ok) { el.openBtn.href = current.link; el.openBtn.removeAttribute('aria-disabled'); el.openBtn.removeAttribute('tabindex'); }
+    else { el.openBtn.removeAttribute('href'); el.openBtn.setAttribute('aria-disabled', 'true'); el.openBtn.setAttribute('tabindex', '-1'); }
+
+    // Format
+    formatRadios.forEach((r) => { r.checked = r.value === format; });
+    el.formatHelp.querySelectorAll('li').forEach((li) => li.classList.toggle('is-active', li.dataset.format === format));
+    el.qrAlerts.textContent = '';
+    if (format === 'smsto' && /[^\x00-\x7F]/.test(text)) {
+      const a = node('div', 'alert warn');
+      a.appendChild(node('p', null, tr.smstoAccent));
+      el.qrAlerts.appendChild(a);
+    }
+
+    // QR
+    current.qr = null;
+    let qrMessage = tr.qrEmpty;
+    if (ok) {
+      try {
+        current.qr = makeQr(buildQrContent(format, phone.clean, text, current.link));
+      } catch (e) {
+        qrMessage = tr.qrError;
+      }
+    }
+    el.qrFrame.hidden = !current.qr;
+    el.qrEmpty.hidden = !!current.qr;
+    el.qrEmpty.textContent = qrMessage;
+    el.pngBtn.disabled = el.svgBtn.disabled = !current.qr;
+    if (current.qr) {
+      const n = current.qr.getModuleCount();
+      el.qr.innerHTML = qrSvg(current.qr);
+      el.qr.setAttribute('aria-label', tr.qrAlt);
+      el.qrMeta.textContent = tr.qrModules(n) + (n >= 57 ? '. ' + tr.qrDense : '');
+      const px = (n + QUIET * 2) * pngScale(current.qr);
+      el.dlNote.textContent = tr.dlNote(px);
+      el.dlNote.hidden = false;
+    } else {
+      el.qr.textContent = '';
+      el.dlNote.hidden = true;
+    }
+  }
+
+  function applyLang() {
+    const tr = t();
+    document.documentElement.lang = lang;
+    document.title = tr.docTitle;
+    document.querySelectorAll('[data-i18n]').forEach((n) => { n.textContent = tr[n.dataset.i18n]; });
+    document.querySelectorAll('[data-i18n-aria]').forEach((n) => { n.setAttribute('aria-label', tr[n.dataset.i18nAria]); });
+    el.phone.placeholder = tr.phonePh;
+    el.message.placeholder = tr.messagePh;
+    el.device.setAttribute('aria-label', tr.deviceLabel);
+    langButtons.forEach((b) => b.setAttribute('aria-pressed', b.dataset.lang === lang ? 'true' : 'false'));
+    const date = new Date(APP_UPDATED + 'T00:00:00Z').toLocaleDateString(tr.locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    el.version.textContent = tr.version(APP_VERSION, date);
+    render();
+  }
+
+  // ---------- Actions ----------
+  el.phone.addEventListener('input', render);
+  el.message.addEventListener('input', render);
+  formatRadios.forEach((r) => r.addEventListener('change', () => {
+    if (!r.checked) return;
+    format = r.value === 'smsto' ? 'smsto' : 'sms';
+    store.set(FORMAT_KEY, format);
+    render();
+  }));
+  langButtons.forEach((b) => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    store.set(LANG_KEY, lang);
+    applyLang();
+  }));
+
+  function flashCopy(label) {
+    el.copyBtn.textContent = label;
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => { copyTimer = null; el.copyBtn.textContent = t().copy; }, 1800);
+  }
+  el.copyBtn.addEventListener('click', () => {
+    if (!current.link) return;
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = current.link; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      let done = false;
+      try { done = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+      flashCopy(done ? t().copied : t().copyFail);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(current.link).then(() => flashCopy(t().copied), fallback);
+    } else { fallback(); }
   });
 
-  // Format du QR : restaure le dernier choix et régénère le QR à chaque changement.
-  (function initQrFormat() {
-    let saved = null;
-    try { saved = localStorage.getItem(QR_FORMAT_KEY); } catch (e) {}
-    qrFormat = saved === 'smsto' ? 'smsto' : 'sms';
-    document.querySelectorAll('input[name="qrFormat"]').forEach((r) => {
-      r.checked = r.value === qrFormat;
-      r.addEventListener('change', () => { if (r.checked) setQrFormat(r.value); });
-    });
-  })();
+  function fileBase() { return 'qr-' + format + '-' + (current.phone || 'sms').replace('+', ''); }
+  el.pngBtn.addEventListener('click', () => {
+    if (!current.qr) return;
+    qrPngBlob(current.qr, (blob) => { if (blob) download(blob, fileBase() + '.png'); });
+  });
+  el.svgBtn.addEventListener('click', () => {
+    if (!current.qr) return;
+    download(new Blob([qrSvg(current.qr)], { type: 'image/svg+xml' }), fileBase() + '.svg');
+  });
 
-  setLang(detectInitialLang());
+  applyLang();
+})();
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
