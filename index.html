@@ -19,6 +19,8 @@
     --text-secondary: #6e6e73;
     --field-bg: rgba(255, 255, 255, 0.65);
     --field-border: rgba(0, 0, 0, 0.08);
+    --segment-active: #ffffff;
+    --warn: #a14a00;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -32,6 +34,8 @@
       --text-secondary: #a1a1a6;
       --field-bg: rgba(255, 255, 255, 0.08);
       --field-border: rgba(255, 255, 255, 0.12);
+      --segment-active: rgba(255, 255, 255, 0.18);
+      --warn: #ffb340;
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -149,6 +153,24 @@
   .btn-download { margin-top: 18px; background: var(--field-bg); border: 1px solid var(--field-border); color: var(--text-primary); }
   .btn-download:hover { background: rgba(0, 0, 0, 0.05); }
 
+  /* Sélecteur de format du QR (contrôle segmenté à deux options) */
+  .qr-format { margin-top: 24px; margin-bottom: 0; }
+  .field-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .segmented { display: flex; gap: 4px; padding: 4px; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 14px; }
+  .segment { flex: 1; position: relative; margin: 0; font-weight: 600; cursor: pointer; }
+  .segment input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .segment span {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    min-height: 40px; padding: 6px 10px; border-radius: 10px;
+    font-size: 14px; color: var(--text-secondary);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  }
+  .segment input:checked + span { background: var(--segment-active); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+  .segment input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--text-secondary); }
+  .hint.warn { color: var(--warn); font-weight: 500; }
+  .hint[hidden], .qr-wrap[hidden] { display: none; }
+
   .version { margin-top: 24px; text-align: center; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
   .toast {
@@ -203,6 +225,15 @@
           <button class="btn-copy" id="copyBtn" onclick="copyLink()"></button>
         </div>
       </div>
+      <div class="field qr-format">
+        <span class="field-label" id="qrFormatLabel"></span>
+        <div class="segmented" role="radiogroup" aria-labelledby="qrFormatLabel">
+          <label class="segment"><input type="radio" name="qrFormat" value="sms" checked><span id="qrFormatSms"></span></label>
+          <label class="segment"><input type="radio" name="qrFormat" value="smsto"><span id="qrFormatSmsto"></span></label>
+        </div>
+        <p class="hint" id="qrFormatHint"></p>
+        <p class="hint warn" id="qrError" role="alert" hidden></p>
+      </div>
       <div class="qr-wrap">
         <div id="qrcode"></div>
         <button class="btn btn-download" id="downloadBtn" onclick="downloadQR()"></button>
@@ -213,15 +244,30 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
   const translations = {
-    fr: { title: "Générateur de liens SMS", subtitle: "Créez une campagne SMS en quelques secondes", phoneLabel: "Numéro de téléphone", textLabel: "Message", generateBtn: "Générer", urlLabel: "Lien de campagne", copyBtn: "Copier", downloadBtn: "Télécharger le QR (JPG)", phonePlaceholder: "+33 6 12 34 56 78", textPlaceholder: "Votre message...", alertPhone: "Veuillez saisir un numéro de téléphone.", copied: "Lien copié dans le presse-papiers !", docTitle: "Générateur de liens SMS", updated: "Mis à jour le" },
-    en: { title: "SMS Link Generator", subtitle: "Create an SMS campaign in seconds", phoneLabel: "Phone number", textLabel: "Message", generateBtn: "Generate", urlLabel: "Campaign link", copyBtn: "Copy", downloadBtn: "Download QR (JPG)", phonePlaceholder: "+1 514 555 0123", textPlaceholder: "Your message...", alertPhone: "Please enter a phone number.", copied: "Link copied to clipboard!", docTitle: "SMS Link Generator", updated: "Updated" }
+    fr: { title: "Générateur de liens SMS", subtitle: "Créez une campagne SMS en quelques secondes", phoneLabel: "Numéro de téléphone", textLabel: "Message", generateBtn: "Générer", urlLabel: "Lien de campagne", copyBtn: "Copier", downloadBtn: "Télécharger le QR (JPG)", phonePlaceholder: "+33 6 12 34 56 78", textPlaceholder: "Votre message...", alertPhone: "Veuillez saisir un numéro de téléphone.", copied: "Lien copié dans le presse-papiers !", docTitle: "Générateur de liens SMS", updated: "Mis à jour le",
+      qrFormatLabel: "Format du QR code", qrFormatSms: "Lien sms:", qrFormatSmsto: "Texte SMSTO",
+      qrHintSms: "Le QR contient le lien ci-dessus, avec le message encodé.",
+      qrHintSmsto: "Le QR contient le numéro et le message en texte brut, sans encodage. Évite les erreurs de décodage de certains scanners Android. Accents non pris en charge.",
+      qrErrorSmstoAccents: "Le format SMSTO n'accepte pas les accents ni les caractères spéciaux (é, è, €…). Retirez-les du message ou choisissez le format « Lien sms: ».",
+      qrErrorGeneric: "Le QR code n'a pas pu être généré. Le message est peut-être trop long." },
+    en: { title: "SMS Link Generator", subtitle: "Create an SMS campaign in seconds", phoneLabel: "Phone number", textLabel: "Message", generateBtn: "Generate", urlLabel: "Campaign link", copyBtn: "Copy", downloadBtn: "Download QR (JPG)", phonePlaceholder: "+1 514 555 0123", textPlaceholder: "Your message...", alertPhone: "Please enter a phone number.", copied: "Link copied to clipboard!", docTitle: "SMS Link Generator", updated: "Updated",
+      qrFormatLabel: "QR code format", qrFormatSms: "sms: link", qrFormatSmsto: "SMSTO text",
+      qrHintSms: "The QR code contains the link above, with the message encoded.",
+      qrHintSmsto: "The QR code contains the number and message as plain text, without encoding. Avoids decoding errors on some Android scanners. Accents not supported.",
+      qrErrorSmstoAccents: "The SMSTO format does not support accents or special characters (é, è, €…). Remove them from the message or choose the “sms: link” format.",
+      qrErrorGeneric: "The QR code could not be generated. The message may be too long." }
   };
   // Version affichée en bas de la page : à mettre à jour à chaque publication.
-  const APP_VERSION = '1.1';
-  const APP_UPDATED = '2026-10-20';
+  const APP_VERSION = '1.2';
+  const APP_UPDATED = '2026-10-21';
   const STORAGE_KEY = 'sms-tool-lang';
+  const QR_FORMAT_KEY = 'sms-tool-qr-format';
   let currentLang = 'fr';
   let currentUrl = '';
+  let currentPhone = '';
+  let currentText = '';
+  let qrFormat = 'sms'; // 'sms' (lien sms:?body=) ou 'smsto' (SMSTO:numéro:message)
+  let qrErrorKey = '';  // clé de traduction du message d'erreur QR affiché, '' si aucun
 
   function detectInitialLang() {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -250,6 +296,10 @@
     document.getElementById('text').placeholder = t.textPlaceholder;
     const updatedDate = new Date(APP_UPDATED + 'T00:00:00Z').toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
     document.getElementById('version').textContent = 'v' + APP_VERSION + ' · ' + t.updated + ' ' + updatedDate;
+    document.getElementById('qrFormatLabel').textContent = t.qrFormatLabel;
+    document.getElementById('qrFormatSms').textContent = t.qrFormatSms;
+    document.getElementById('qrFormatSmsto').textContent = t.qrFormatSmsto;
+    updateQrFormatUi();
   }
 
   // Taille de QR adaptative : pleine largeur disponible dans la carte,
@@ -271,15 +321,59 @@
     const text = document.getElementById('text').value.trim();
     if (!phone) { showToast(translations[currentLang].alertPhone); return; }
     const cleanPhone = phone.replace(/[\s()-]/g, '');
+    currentPhone = cleanPhone;
+    currentText = text;
     currentUrl = 'sms:' + cleanPhone;
     if (text) { currentUrl += '?' + 'body=' + encodeSmsBody(text); }
     document.getElementById('urlBox').textContent = currentUrl;
-    const qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = '';
-    const size = getQrSize();
-    new QRCode(qrContainer, { text: currentUrl, width: size, height: size, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    renderQr();
     document.getElementById('result').classList.add('visible');
     document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // Contenu encodé dans le QR selon le format choisi :
+  // - 'sms'   : le lien de campagne (sms:numéro?body=message encodé)
+  // - 'smsto' : SMSTO:numéro:message, message en texte brut sans aucun encodage.
+  //   Le scanner n'a rien à décoder (pas de + transformé en espace, pas de %XX).
+  //   Format propre aux QR codes : il n'est pas utilisable comme lien cliquable.
+  function buildQrContent() {
+    if (qrFormat === 'smsto') return 'SMSTO:' + currentPhone + (currentText ? ':' + currentText : '');
+    return currentUrl;
+  }
+  function renderQr() {
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = '';
+    qrErrorKey = '';
+    // SMSTO + caractère non-ASCII : qrcodejs 1.0.0 calcule mal la taille du QR
+    // dès qu'un texte UTF-8 dépasse quelques caractères ("code length overflow"),
+    // et le BOM qu'il ajoute peut empêcher les scanners de reconnaître "SMSTO:".
+    // Le format sms: n'est pas concerné : le lien encodé est 100 % ASCII.
+    if (qrFormat === 'smsto' && /[^\x00-\x7F]/.test(currentText)) {
+      qrErrorKey = 'qrErrorSmstoAccents';
+    } else {
+      try {
+        const size = getQrSize();
+        new QRCode(qrContainer, { text: buildQrContent(), width: size, height: size, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      } catch (e) {
+        qrContainer.innerHTML = '';
+        qrErrorKey = 'qrErrorGeneric';
+      }
+    }
+    document.querySelector('.qr-wrap').hidden = !!qrErrorKey;
+    updateQrFormatUi();
+  }
+  function updateQrFormatUi() {
+    const t = translations[currentLang];
+    document.getElementById('qrFormatHint').textContent = qrFormat === 'smsto' ? t.qrHintSmsto : t.qrHintSms;
+    const error = document.getElementById('qrError');
+    error.textContent = qrErrorKey ? t[qrErrorKey] : '';
+    error.hidden = !qrErrorKey;
+  }
+  function setQrFormat(format) {
+    qrFormat = format === 'smsto' ? 'smsto' : 'sms';
+    try { localStorage.setItem(QR_FORMAT_KEY, qrFormat); } catch (e) {}
+    document.querySelectorAll('input[name="qrFormat"]').forEach((r) => { r.checked = r.value === qrFormat; });
+    if (currentUrl) renderQr(); else updateQrFormatUi();
   }
   function copyLink() {
     if (!currentUrl) return;
@@ -296,7 +390,7 @@
     const total = px + padding * 2;
     const finalCanvas = document.createElement('canvas'); finalCanvas.width = total; finalCanvas.height = total;
     const ctx = finalCanvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, total, total);
-    function finalize() { const link = document.createElement('a'); link.download = 'qr-campagne-sms.jpg'; link.href = finalCanvas.toDataURL('image/jpeg', 0.92); link.click(); }
+    function finalize() { const link = document.createElement('a'); link.download = qrFormat === 'smsto' ? 'qr-campagne-smsto.jpg' : 'qr-campagne-sms.jpg'; link.href = finalCanvas.toDataURL('image/jpeg', 0.92); link.click(); }
     if (canvas) { ctx.drawImage(canvas, padding, padding, px, px); finalize(); }
     else if (img) { const tmp = new Image(); tmp.crossOrigin = 'anonymous'; tmp.onload = () => { ctx.drawImage(tmp, padding, padding, px, px); finalize(); }; tmp.src = img.src; }
   }
@@ -317,8 +411,19 @@
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (currentUrl) generate(); }, 250);
+    resizeTimer = setTimeout(() => { if (currentUrl) renderQr(); }, 250);
   });
+
+  // Format du QR : restaure le dernier choix et régénère le QR à chaque changement.
+  (function initQrFormat() {
+    let saved = null;
+    try { saved = localStorage.getItem(QR_FORMAT_KEY); } catch (e) {}
+    qrFormat = saved === 'smsto' ? 'smsto' : 'sms';
+    document.querySelectorAll('input[name="qrFormat"]').forEach((r) => {
+      r.checked = r.value === qrFormat;
+      r.addEventListener('change', () => { if (r.checked) setQrFormat(r.value); });
+    });
+  })();
 
   setLang(detectInitialLang());
 </script>
